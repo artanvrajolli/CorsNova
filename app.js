@@ -93,6 +93,7 @@ app.use('/', upload.none(),async function (req, res) {
         }
         res.send(Buffer.from(response.body));
     }catch(error){
+        console.log("Error",error);
         res.status(500).send(error);
         return;
     }
