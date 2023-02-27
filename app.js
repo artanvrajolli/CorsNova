@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-
+import fetcher from 'node-fetch';
 const app = express();
 
 const port = process.env.PORT || 3030
@@ -64,7 +64,7 @@ app.use('/', upload.none(),async function (req, res) {
         data = null; // remove data 
     }
     try{
-       let response = await fetch(url, {
+       let response = await fetcher(url, {
             method: method,
             headers: headers,
             body:data,
