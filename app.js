@@ -1,6 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import fetcher from 'node-fetch';
+import { FormData } from 'node-fetch';
 const app = express();
 
 const port = process.env.PORT || 3030
@@ -23,7 +24,7 @@ app.use(express.json());
 const upload = multer();
 
 app.use(express.urlencoded({ extended: true }));
-app.use('/', upload.none(),async function (req, res) {
+app.use('/', upload.any(),async function (req, res) {
     let method = req.method;
     let url = req.query.url;
     if(!url){
@@ -33,7 +34,11 @@ app.use('/', upload.none(),async function (req, res) {
     url = decodeURIComponent(url);
     let data = req?.body ?? {};
     let headers = {};
-    switch(req.headers['content-type']){
+    let requestHeaderContentType = req.headers['content-type'] ?? "";
+    if(requestHeaderContentType.startsWith('multipart/form-data')){
+        requestHeaderContentType = 'multipart/form-data';
+    }
+    switch(requestHeaderContentType){
         case 'application/json':
             data = JSON.stringify(data);
             headers['Content-Type'] = 'application/json';
@@ -47,7 +52,10 @@ app.use('/', upload.none(),async function (req, res) {
             for(let key in req.body){
                 data.append(key,req.body[key]);
             }
-            headers['Content-Type'] = 'multipart/form-data';
+            for(let file of req.files){
+                data.append(file.fieldname, file.buffer, { filename: file.originalname });
+            }
+            // headers['Content-Type'] = 'multipart/form-data';
             break;
     }
 
@@ -55,7 +63,7 @@ app.use('/', upload.none(),async function (req, res) {
    
     for(let key in req.headers){
         if(key.startsWith('x-')){
-            let newKey = key.replace('x-','');
+            let newKey = key.replace(/^x-/i,'');
             headers[newKey] = req.headers[key];
         }
     }
@@ -69,28 +77,15 @@ app.use('/', upload.none(),async function (req, res) {
             headers: headers,
             body:data,
         }).then(async (response) => {
-            let responseData = null;
-            let responseHeaders = response.headers;
-            let contentHeader = responseHeaders.get('content-type');
-            if(contentHeader === 'application/json'){
-                responseData =  await response.json();
-            }else if(contentHeader === 'text/html'){
-                responseData =  await response.text();   
-            }else{
-                responseData =   await response.arrayBuffer();
-            }
-
+            const buffer = await response.arrayBuffer();
             return {
-                body: responseData,
+                body: buffer,
                 headers: response.headers,
                 status: response.status
             }
         });
-        if(response.headers['content-type'] === 'application/json'){
-            res.setHeader("Content-Type",'application/json');
-        }else{
-            res.setHeader("Content-Type",response.headers.get('content-type') || 'application/json');
-        }
+       
+        res.setHeader("Content-Type",response.headers.get('content-type') || 'text/plain');
         res.send(Buffer.from(response.body));
     }catch(error){
         console.log("Error",error);
