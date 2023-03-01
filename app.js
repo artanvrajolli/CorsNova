@@ -1,17 +1,15 @@
 import express from 'express';
 import multer from 'multer';
-import fetcher from 'node-fetch';
-import { FormData } from 'node-fetch';
+import fetch, { Blob,FormData } from 'node-fetch';
+import { PassThrough } from 'stream';
+
 const app = express();
 
 const port = process.env.PORT || 3030
 function enableCORS(req, res, next) {
     res.header('Access-Control-Allow-Origin', req.headers.origin || '*')
-    res.header('Access-Control-Allow-Credentials', true)
-    res.header(
-      'Access-Control-Allow-Headers',
-      '*'
-    )
+    res.header('Access-Control-Allow-Credentials', true); // Access-Control-Allow-Credentials
+    res.header('Access-Control-Allow-Headers','*');
     res.header(
       'Access-Control-Allow-Methods',
       'OPTIONS, GET, POST, PATCH, PUT, DELETE'
@@ -27,6 +25,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/', upload.any(),async function (req, res) {
     let method = req.method;
     let url = req.query.url;
+    let cookies = req.headers.cookie ?? "";
     if(!url){
         res.status(400).send('URL is required');
         return;
@@ -34,6 +33,10 @@ app.use('/', upload.any(),async function (req, res) {
     url = decodeURIComponent(url);
     let data = req?.body ?? {};
     let headers = {};
+    if(cookies){
+        headers['Cookie'] = cookies;
+    }
+
     let requestHeaderContentType = req.headers['content-type'] ?? "";
     if(requestHeaderContentType.startsWith('multipart/form-data')){
         requestHeaderContentType = 'multipart/form-data';
@@ -53,7 +56,7 @@ app.use('/', upload.any(),async function (req, res) {
                 data.append(key,req.body[key]);
             }
             for(let file of req.files){
-                data.append(file.fieldname, file.buffer, { filename: file.originalname });
+                data.append(file.fieldname, new Blob([file.buffer]), { filename: file.originalname });
             }
             // headers['Content-Type'] = 'multipart/form-data';
             break;
@@ -71,22 +74,29 @@ app.use('/', upload.any(),async function (req, res) {
     if(["GET","HEAD"].includes(method)){
         data = null; // remove data 
     }
+    // console.log("headers:",headers);
     try{
-       let response = await fetcher(url, {
+       let response = await fetch(url, {
             method: method,
             headers: headers,
             body:data,
-        }).then(async (response) => {
-            const buffer = await response.arrayBuffer();
-            return {
-                body: buffer,
-                headers: response.headers,
-                status: response.status
-            }
         });
        
-        res.setHeader("Content-Type",response.headers.get('content-type') || 'text/plain');
-        res.send(Buffer.from(response.body));
+        const stream = new PassThrough();
+        response.body.pipe(stream);
+    
+        // Set the response headers to indicate that the data is being streamed
+        res.set({
+          'Content-Type': response.headers.get('content-type'),
+          'Transfer-Encoding': 'chunked'
+        });
+        // add all respnse header as custom header to response with prefix forward-
+        for(let key in response.headers.raw()){
+            res.set('Forward-'+key,response.headers.get(key));
+        }
+    
+        // Pipe the data from the pass-through stream to the response
+        stream.pipe(res);
     }catch(error){
         console.log("Error",error);
         res.status(500).send(error);
