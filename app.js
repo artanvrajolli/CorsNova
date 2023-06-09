@@ -17,11 +17,11 @@ function enableCORS(req, res, next) {
     next()
   }
 app.use(enableCORS);
-app.use(express.json());
+app.use(express.json({limit: '10gb'}));
+app.use(express.urlencoded({limit: '10gb', extended: true}));
 
 const upload = multer();
 
-app.use(express.urlencoded({ extended: true }));
 app.use('/', upload.any(),async function (req, res) {
     let method = req.method;
     let url = req.query.url;
