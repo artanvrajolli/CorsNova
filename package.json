@@ -2,12 +2,15 @@
   "name": "corsnova",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "bundle.cjs",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
 	"start": "node bundle.cjs"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "engines": {
+    "node": ">=18"
+  }
 }
