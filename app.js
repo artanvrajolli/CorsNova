@@ -10,6 +10,7 @@ function enableCORS(req, res, next) {
     res.header('Access-Control-Allow-Origin', req.headers.origin || '*')
     res.header('Access-Control-Allow-Credentials', true); // Access-Control-Allow-Credentials
     res.header('Access-Control-Allow-Headers','*');
+    res.header('Access-Control-Expose-Headers','*');
     res.header(
       'Access-Control-Allow-Methods',
       'OPTIONS, GET, POST, PATCH, PUT, DELETE'
