@@ -24,6 +24,7 @@ app.use(express.urlencoded({limit: '10gb', extended: true}));
 const upload = multer();
 
 app.use('/', upload.any(),async function (req, res) {
+    let userAgent = req.headers['user-agent'] ?? "";
     let method = req.method;
     let url = req.query.url;
     let cookies = req.headers.cookie ?? "";
@@ -75,7 +76,11 @@ app.use('/', upload.any(),async function (req, res) {
     if(["GET","HEAD"].includes(method)){
         data = null; // remove data 
     }
-    // console.log("headers:",headers);
+
+    // testing purpose agent remover
+    // userAgent = userAgent.replace(/(axios|postman)/i,''); 
+    headers['User-Agent'] = userAgent;
+
     try{
        let response = await fetch(url, {
             method: method,
