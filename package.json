@@ -6,8 +6,9 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node dist/bundle.cjs",
-    "build": "webpack --config webpack.config.cjs"
+    "start": "node app.js",
+    "start-webpack": "node dist/bundle.cjs",
+    "build-webpack": "webpack --config webpack.config.cjs"
   },
   "keywords": [],
   "author": "",
