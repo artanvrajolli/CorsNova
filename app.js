@@ -24,7 +24,7 @@ app.use(express.urlencoded({limit: '10gb', extended: true}));
 const upload = multer();
 
 app.use('/', upload.any(),async function (req, res) {
-    let userAgent = req.headers['user-agent'] ?? "";
+    let userAgent = req.headers['x-user-agent'] ?? req.headers['user-agent'] ?? "";
     let method = req.method;
     let url = req.query.url;
     let cookies = req.headers.cookie ?? "";

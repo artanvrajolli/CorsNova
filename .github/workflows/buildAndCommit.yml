@@ -1,0 +1,44 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v2
+        with:
+          ref: bundle
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Checkout deploy branch
+        uses: actions/checkout@v2
+        with:
+          ref: deploy
+          create-branch: true
+
+      - name: Copy build files to deploy branch
+        run: cp -R build/* .
+
+      - name: Commit build files
+        run: |
+          git config --global user.email "artanvrajolli@gmail.com"
+          git config --global user.name "artanvrjaolli"
+          git add .
+          git commit -m "Deploy build files"
+      
+      - name: Push changes to deploy branch
+        uses: ad-m/github-push-action@master
+        with:
+          branch: deploy
+          github_token: ${{ secrets.GITHUB_TOKEN }}
