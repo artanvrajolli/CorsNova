@@ -1,5 +1,7 @@
 # CorsNova
-
+<p align="center">
+  <img src="images/corsnova_image_aigen.webp" alt="CorsNova Image" style="max-height: 300px;">
+</p>
 A lightweight and efficient CORS proxy server built with Express.js that helps bypass CORS restrictions during development and testing.
 
 ## Features
@@ -26,29 +28,16 @@ A lightweight and efficient CORS proxy server built with Express.js that helps b
 
 ## Usage
 
-Send your request to the CorsNova server, specifying the target URL in one of two ways:
+Send your request to the CorsNova server, specifying the target URL as the path:
 
-1. **Using a query parameter:**
+```
+http://localhost:3030/<target_url>
+```
+Example:
+```
+http://localhost:3030/https://example.com/api/data
+```
 
-   ```
-   http://localhost:3030/?url=<encoded_target_url>
-   ```
-   Example:
-   ```
-   http://localhost:3030/?url=https%3A%2F%2Fexample.com%2Fapi%2Fdata
-   ```
-
-2. **Using the path:**
-
-   ```
-   http://localhost:3030/<target_url>
-   ```
-   Example:
-   ```
-   http://localhost:3030/https://example.com/api/data
-   ```
-
-> **Note:** If both the path and the `url` query parameter are provided, the `url` query parameter takes precedence.
 
 ### Request Forwarding
 
@@ -73,7 +62,7 @@ formData.append('key2', 'value2');
 // Append files if needed
 // formData.append('myFile', fileInputElement.files[0]);
 
-fetch('http://localhost:3030/?url=https%3A%2F%2Fwww.example.com', {
+fetch('http://localhost:3030/https://www.example.com', {
   method: 'POST',
   headers: {
     // Prefix custom headers with 'x-'
