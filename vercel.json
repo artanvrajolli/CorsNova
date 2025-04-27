@@ -1,6 +1,9 @@
 {
     "version": 2,
-    "rewrites": [{ "source": "/(.*)", "destination": "/app.js" }],
+    "rewrites": [
+      { "source": "/", "destination": "/app.js" },
+      { "source": "/(.*)", "destination": "/app.js" }
+    ],
     "builds": [
       {
         "src": "./app.js",
@@ -13,7 +16,8 @@
         "headers": [
           { "key": "Access-Control-Allow-Origin", "value": "*" },
           { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS" },
-          { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
+          { "key": "Access-Control-Allow-Headers", "value": "*" },
+          { "key": "Access-Control-Allow-Credentials", "value": "true" }
         ]
       }
     ]
