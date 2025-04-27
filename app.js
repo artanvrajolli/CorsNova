@@ -30,7 +30,11 @@ app.use('/:path(*)', upload.any(), async function (req, res) {
     let url = req.query.url || path;
     let cookies = req.headers.cookie ?? "";
     if (!url) {
-        res.status(400).send('URL is required');
+        let currentUrl = req.protocol + '://' + req.get('host') + req.originalUrl;
+        res.status(400).send({
+            message: `URL parameter is required, example: ${currentUrl}https://example.com`,
+            status: 'error'
+        });
         return;
     }
     url = decodeURIComponent(url);

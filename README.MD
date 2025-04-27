@@ -2,45 +2,65 @@
 
 A lightweight and efficient CORS proxy server built with Express.js that helps bypass CORS restrictions during development and testing.
 
-## Core Features
+## Features
 
-- **Universal CORS Bypass**: Handles CORS for any target URL.
-- **Multiple Content Type Support**:
+- **Universal CORS Proxy**: Forwards requests to any target URL, bypassing CORS restrictions.
+- **Content-Type Support**:
   - `application/json`
   - `application/x-www-form-urlencoded`
-  - `multipart/form-data`
+  - `multipart/form-data` (file uploads supported)
 - **Header Management**:
-  - Forwards custom request headers prefixed with `x-` (e.g., `x-authorization` becomes `Authorization` in the forwarded request).
-  - Forwards response headers from the target server back to the client, prefixed with `Forward-` (e.g., `Content-Type` becomes `Forward-Content-Type`).
-  - Forwards cookies from the client request to the target server.
-- **File Operations**:
-  - Handles file uploads (`multipart/form-data`) using `multer`.
-  - Streams responses from the target server back to the client.
-  - Supports large request bodies (up to 10GB limit).
+  - Forwards custom request headers prefixed with `x-` (e.g., `x-authorization` becomes `Authorization`).
+  - Forwards cookies from the client to the target server.
+  - Forwards all response headers from the target server to the client, prefixed with `Forward-` (e.g., `Content-Type` becomes `Forward-Content-Type`).
+- **Streaming**: Streams responses from the target server back to the client.
+- **Large Payloads**: Supports request bodies up to 10GB.
 
 ## Installation
 
-1.  Install [Node.js](https://nodejs.org/).
-2.  Clone this repository.
-3.  Run `npm install` in the repository directory.
-4.  Start the application with `node app.js` or `npm run start`.
-5.  The server will run on the port specified by the `PORT` environment variable, or 3030 by default.
+1. Install [Node.js](https://nodejs.org/).
+2. Clone this repository.
+3. Run `npm install` in the repository directory.
+4. Start the application with `npm run start` or `node app.js`.
+5. The server will run on the port specified by the `PORT` environment variable, or `3030` by default.
 
 ## Usage
 
 Send your request to the CorsNova server, specifying the target URL in one of two ways:
 
-1.  **Using a query parameter:**
-    `http://localhost:3030/?url=<encoded_target_url>`
-    Example: `http://localhost:3030/?url=https%3A%2F%2Fexample.com%2Fapi%2Fdata`
+1. **Using a query parameter:**
 
-2.  **Using the path:**
-    `http://localhost:3030/<target_url>`
-    Example: `http://localhost:3030/https://example.com/api/data`
+   ```
+   http://localhost:3030/?url=<encoded_target_url>
+   ```
+   Example:
+   ```
+   http://localhost:3030/?url=https%3A%2F%2Fexample.com%2Fapi%2Fdata
+   ```
 
-*Note: If both the path and the `url` query parameter are provided, the `url` query parameter takes precedence.*
+2. **Using the path:**
 
-CorsNova will forward your request (including method, headers prefixed with `x-`, cookies, and body) to the target URL and stream the response back, adding the `Forward-` prefix to the original response headers.
+   ```
+   http://localhost:3030/<target_url>
+   ```
+   Example:
+   ```
+   http://localhost:3030/https://example.com/api/data
+   ```
+
+> **Note:** If both the path and the `url` query parameter are provided, the `url` query parameter takes precedence.
+
+### Request Forwarding
+
+- All HTTP methods are supported.
+- Request headers prefixed with `x-` are forwarded without the prefix.
+- Cookies are forwarded.
+- Request body is forwarded as-is, supporting JSON, URL-encoded, and multipart forms (including files).
+
+### Response Forwarding
+
+- All response headers from the target server are sent back to the client, prefixed with `Forward-`.
+- The response body is streamed directly to the client.
 
 ## Example
 
@@ -78,12 +98,11 @@ fetch('http://localhost:3030/?url=https%3A%2F%2Fwww.example.com', {
 
 The proxy will make a POST request to `https://www.example.com` with the `Authorization: Bearer YOUR_TOKEN_HERE` header and the provided form data.
 
+
 ## License
 
 MIT License
 
 ## Acknowledgments
 
-This app was inspired by `allOrigins` by gnuns and `cors-anywhere` by Rob Wu.
-
-
+Inspired by [`allOrigins`](https://github.com/gnuns/allOrigins) by gnuns and [`cors-anywhere`](https://github.com/Rob--W/cors-anywhere) by Rob Wu.
