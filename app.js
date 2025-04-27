@@ -23,13 +23,17 @@ app.use(express.urlencoded({ limit: '10gb', extended: true }));
 
 const upload = multer();
 
+app.options('/:path(*)', (req, res) => {
+    res.sendStatus(200);
+});
+
 app.use('/:path(*)', upload.any(), async function (req, res) {
     let userAgent = req.headers['x-user-agent'] ?? req.headers['user-agent'] ?? "";
     let method = req.method;
     let url = req.params.path || "";
     let cookies = req.headers.cookie ?? "";
     if (!url) {
-        let currentUrl = req.protocol + '://' + req.get('host') + req.originalUrl;
+        let currentUrl = req.protocol + '://' + req.get('host') + '/';
         res.status(400).send({
             message: `URL parameter is required, example: ${currentUrl}https://example.com`,
             status: 'error'
