@@ -1,6 +1,6 @@
 # CorsNova
 <p align="center">
-  <img src="images/corsnova_image_aigen.webp" alt="CorsNova Image" style="max-height: 300px;">
+  <img src="images/corsnova_image_aigen.webp" alt="CorsNova Image" height="300" >
 </p>
 A lightweight and efficient CORS proxy server built with Express.js that helps bypass CORS restrictions during development and testing.
 
