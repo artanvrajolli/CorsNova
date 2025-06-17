@@ -1,7 +1,6 @@
 # CorsNova
 <p align="center">
-  <img src="images/architecture_overview.svg" alt="CorsNova Image" height="300" style="background-color: white;">
-  <img src="images/request_flow.svg" alt="CorsNova Image" height="300" style="background-color: white;">
+  <img src="images/request_flow.svg" alt="CorsNova Image" height="600">
 </p>
 A lightweight and efficient CORS proxy server built with Express.js that helps bypass CORS restrictions during development and testing.
 
