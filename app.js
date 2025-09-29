@@ -31,7 +31,7 @@ app.use('/:path(*)', upload.any(), async function (req, res) {
     let userAgent = req.headers['x-user-agent'] ?? req.headers['user-agent'] ?? "";
     let method = req.method;
     let url = req.params.path || "";
-    let cookies = req.headers.cookie ?? "";
+    let cookies = req.headers['cookie'] ?? "";
     if (!url) {
         let currentUrl = req.protocol + '://' + req.get('host') + '/';
         return res.status(400).json({
@@ -41,6 +41,8 @@ app.use('/:path(*)', upload.any(), async function (req, res) {
         
     }
     url = decodeURIComponent(url);
+    // Fix malformed URLs where https:/ becomes https://
+    url = url.replace(/^https?:\/(?!\/)/, (match) => match.slice(0, -1) + '//');
     let data = req?.body ?? {};
     let headers = {};
     if (cookies) {
