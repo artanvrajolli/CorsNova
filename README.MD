@@ -48,13 +48,13 @@ npm run lint          # run ESLint
 Send your request to the CorsNova server, specifying the target URL as the path:
 
 ```
-https://<your-vercel-domain>/<target_url>
+https://corsnova.vercel.app/<target_url>
 ```
 
 Example:
 
 ```
-https://<your-vercel-domain>/https://example.com/api/data
+https://corsnova.vercel.app/https://example.com/api/data
 ```
 
 ### Request Forwarding
@@ -81,7 +81,7 @@ formData.append('key2', 'value2');
 // Append files if needed
 // formData.append('myFile', fileInputElement.files[0]);
 
-fetch('https://<your-vercel-domain>/https://www.example.com', {
+fetch('https://corsnova.vercel.app/https://www.example.com', {
   method: 'POST',
   headers: {
     // Prefix custom headers with 'x-'
