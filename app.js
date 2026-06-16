@@ -131,7 +131,7 @@ app.use(async (req, res) => {
     logRequest({
       requestId,
       method: req.method,
-      target: targetUrl.hostname,
+      target: targetUrl?.hostname,
       status: res.statusCode,
       durMs: Date.now() - start,
     });
