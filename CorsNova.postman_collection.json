@@ -1,0 +1,181 @@
+{
+  "info": {
+    "name": "CorsNova",
+    "description": "Example requests for the CorsNova CORS proxy (local development)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Root / usage info",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3030/",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3030"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GET proxy (httpbin)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3030/https://httpbin.org/get?foo=bar",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3030",
+          "path": ["https://httpbin.org/get"],
+          "query": [{ "key": "foo", "value": "bar" }]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "POST JSON with custom header",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-authorization",
+            "value": "Bearer YOUR_TOKEN_HERE",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"hello\": \"world\"}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "http://localhost:3030/https://httpbin.org/post",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3030",
+          "path": ["https://httpbin.org/post"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "POST form-data with image",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "name",
+              "value": "sample",
+              "type": "text"
+            },
+            {
+              "key": "photo",
+              "type": "file",
+              "src": "/path/to/your/image.png"
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost:3030/https://httpbin.org/post",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3030",
+          "path": ["https://httpbin.org/post"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "POST form-data with small video",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "clip",
+              "type": "file",
+              "src": "/path/to/your/video.mp4"
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost:3030/https://httpbin.org/post",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3030",
+          "path": ["https://httpbin.org/post"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "OPTIONS preflight",
+      "request": {
+        "method": "OPTIONS",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "https://example.com",
+            "type": "text"
+          },
+          {
+            "key": "Access-Control-Request-Method",
+            "value": "POST",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3030/https://httpbin.org/post",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3030",
+          "path": ["https://httpbin.org/post"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Failure: SSRF private IP",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3030/http://127.0.0.1/secret",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3030",
+          "path": ["http://127.0.0.1/secret"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Failure: unsupported protocol",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3030/file:///etc/passwd",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3030",
+          "path": ["file:///etc/passwd"]
+        }
+      },
+      "response": []
+    }
+  ]
+}

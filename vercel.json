@@ -1,29 +1,24 @@
 {
-    "version": 2,
-    "rewrites": [
-      { "source": "/", "destination": "/app.js" },
-      { "source": "/(.*)", "destination": "/app.js" }
-    ],
-    "builds": [
-      {
-        "src": "./app.js",
-        "use": "@vercel/node"
-      }
-    ],
-    "functions": {
-      "app.js": {
-        "runtime": "nodejs22.x"
-      }
-    },
-    "headers": [
-      {
-        "source": "/(.*)",
-        "headers": [
-          { "key": "Access-Control-Allow-Origin", "value": "*" },
-          { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS" },
-          { "key": "Access-Control-Allow-Headers", "value": "*" },
-          { "key": "Access-Control-Allow-Credentials", "value": "true" }
-        ]
-      }
-    ]
+  "version": 2,
+  "rewrites": [
+    { "source": "/", "destination": "/app.js" },
+    { "source": "/(.*)", "destination": "/app.js" }
+  ],
+  "functions": {
+    "app.js": {
+      "runtime": "nodejs22.x",
+      "maxDuration": 30
+    }
+  },
+  "regions": ["fra1", "iad1"],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "*" }
+      ]
+    }
+  ]
 }
