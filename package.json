@@ -27,7 +27,7 @@
   },
   "homepage": "https://github.com/artanvrajolli/CorsNova#readme",
   "engines": {
-    "node": "22.x",
+    "node": "24.x",
     "npm": "10.x"
   },
   "dependencies": {
