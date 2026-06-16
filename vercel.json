@@ -7,7 +7,6 @@
       "destination": "/app.js"
     }
   ],
-  "regions": ["fra1", "iad1"],
   "headers": [
     {
       "source": "/(.*)",
