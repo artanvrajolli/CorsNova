@@ -1,15 +1,6 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "rewrites": [
-    { "source": "/", "destination": "/app.js" },
-    { "source": "/(.*)", "destination": "/app.js" }
-  ],
-  "functions": {
-    "app.js": {
-      "runtime": "nodejs22.x",
-      "maxDuration": 30
-    }
-  },
   "regions": ["fra1", "iad1"],
   "headers": [
     {
