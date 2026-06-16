@@ -53,18 +53,18 @@ function multipartParser(req, res, next) {
 
 app.options('*', (req, res) => res.sendStatus(204));
 
-app.get('/', (req, res) => {
+app.use(rateLimit);
+app.use(multipartParser);
+
+function sendUsage(req, res) {
   const host = req.get('host');
   const proto = req.headers['x-forwarded-proto'] || req.protocol;
   const example = `${proto}://${host}/https://example.com`;
-  res.json({
+  return res.json({
     message: `CorsNova CORS proxy. Use: ${example}`,
     status: 'ok',
   });
-});
-
-app.use(rateLimit);
-app.use(multipartParser);
+}
 
 app.use(async (req, res) => {
   const requestId = req.headers['x-vercel-id'] || crypto.randomUUID();
@@ -73,13 +73,9 @@ app.use(async (req, res) => {
 
   try {
     const rawTarget = (req.url || '/').slice(1);
-    if (!rawTarget || rawTarget === '/') {
-      const host = req.get('host');
-      const proto = req.headers['x-forwarded-proto'] || req.protocol;
-      return res.json({
-        message: `CorsNova CORS proxy. Use: ${proto}://${host}/https://example.com`,
-        status: 'ok',
-      });
+    // Vercel may rewrite the root path to the function entrypoint (app.js).
+    if (!rawTarget || rawTarget === '/' || rawTarget === 'app.js') {
+      return sendUsage(req, res);
     }
     targetUrl = await validateTargetUrl(rawTarget);
   } catch (err) {
