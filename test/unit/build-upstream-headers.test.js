@@ -54,4 +54,17 @@ describe('buildUpstreamHeaders', () => {
     const headers = buildUpstreamHeaders({}, { defaultUserAgent: 'MyBot/1' });
     assert.equal(headers['user-agent'], 'MyBot/1');
   });
+
+  it('does not forward Vercel-internal headers', () => {
+    const headers = buildUpstreamHeaders({
+      'x-vercel-oidc-token': 'secret-token',
+      'x-vercel-deployment-url': 'https://example.vercel.app',
+      'x-invocation-id': 'inv-123',
+      'x-api-key': 'public-key',
+    });
+    assert.equal(headers['vercel-oidc-token'], undefined);
+    assert.equal(headers['vercel-deployment-url'], undefined);
+    assert.equal(headers['invocation-id'], undefined);
+    assert.equal(headers['api-key'], 'public-key');
+  });
 });
