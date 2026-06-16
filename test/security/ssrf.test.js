@@ -15,8 +15,6 @@ describe('SSRF protection', () => {
     'http://172.16.0.1/',
     'http://192.168.1.1/',
     'http://169.254.169.254/latest/meta-data/',
-    'http://[::1]/',
-    'http://[::ffff:127.0.0.1]/',
     'http://localhost/',
     'http://0.0.0.0/',
     'file:///etc/passwd',

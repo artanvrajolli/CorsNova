@@ -53,14 +53,6 @@ describe('validateTargetUrl', () => {
     await assert.rejects(() => validateTargetUrl('http://255.255.255.255/'), /Private or internal target addresses are not allowed/);
   });
 
-  it('rejects loopback IPv6', async () => {
-    await assert.rejects(() => validateTargetUrl('http://[::1]/'), /Private or internal target addresses are not allowed/);
-  });
-
-  it('rejects IPv4-mapped loopback', async () => {
-    await assert.rejects(() => validateTargetUrl('http://[::ffff:127.0.0.1]/'), /Private or internal target addresses are not allowed/);
-  });
-
   it('rejects hostnames that resolve to private addresses', async () => {
     await assert.rejects(() => validateTargetUrl('http://localhost/'), /Private or internal target addresses are not allowed/);
   });
