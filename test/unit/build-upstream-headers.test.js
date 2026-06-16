@@ -42,16 +42,16 @@ describe('buildUpstreamHeaders', () => {
       'user-agent': 'Browser/1.0',
       'x-user-agent': 'CustomAgent/2.0',
     });
-    assert.equal(headers['User-Agent'], 'CustomAgent/2.0');
+    assert.equal(headers['user-agent'], 'CustomAgent/2.0');
   });
 
   it('falls back to default user agent', () => {
     const headers = buildUpstreamHeaders({});
-    assert.equal(headers['User-Agent'], 'CorsNova/1.0');
+    assert.equal(headers['user-agent'], 'CorsNova/1.0');
   });
 
   it('allows overriding default user agent', () => {
     const headers = buildUpstreamHeaders({}, { defaultUserAgent: 'MyBot/1' });
-    assert.equal(headers['User-Agent'], 'MyBot/1');
+    assert.equal(headers['user-agent'], 'MyBot/1');
   });
 });
