@@ -73,12 +73,12 @@ app.use(async (req, res) => {
 
   try {
     const rawTarget = (req.url || '/').slice(1);
-    if (!rawTarget) {
+    if (!rawTarget || rawTarget === '/') {
       const host = req.get('host');
       const proto = req.headers['x-forwarded-proto'] || req.protocol;
-      return res.status(400).json({
-        status: 'error',
-        message: `URL parameter is required, example: ${proto}://${host}/https://example.com`,
+      return res.json({
+        message: `CorsNova CORS proxy. Use: ${proto}://${host}/https://example.com`,
+        status: 'ok',
       });
     }
     targetUrl = await validateTargetUrl(rawTarget);
@@ -144,4 +144,4 @@ if (process.env.VERCEL !== '1') {
   });
 }
 
-export { app };
+export default app;
