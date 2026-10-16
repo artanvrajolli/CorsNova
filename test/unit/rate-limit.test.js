@@ -1,6 +1,6 @@
-import { describe, it, beforeEach } from 'node:test';
+import { describe, it, beforeEach, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { rateLimit } from '../../lib/rate-limit.js';
+import { rateLimit, sweepBuckets, _resetBuckets, _bucketCount } from '../../lib/rate-limit.js';
 
 describe('rateLimit', () => {
   beforeEach(() => {
@@ -49,5 +49,33 @@ describe('rateLimit', () => {
     let called = false;
     rateLimit(req, makeRes(), () => { called = true; });
     assert.equal(called, true);
+  });
+});
+
+describe('rateLimit bucket eviction', () => {
+  beforeEach(() => {
+    process.env.RATE_LIMIT_PER_MINUTE = '100';
+    _resetBuckets();
+  });
+
+  afterEach(() => {
+    mock.timers.reset();
+    _resetBuckets();
+  });
+
+  it('sweeps buckets whose window has expired', () => {
+    mock.timers.enable({ apis: ['Date'] });
+    const res = { set() {}, status() { return this; }, json() { return this; } };
+    for (let i = 0; i < 5; i++) {
+      rateLimit({ headers: {}, socket: { remoteAddress: `10.1.0.${i}` } }, res, () => {});
+    }
+    assert.equal(_bucketCount(), 5);
+
+    sweepBuckets();
+    assert.equal(_bucketCount(), 5, 'live buckets are kept');
+
+    mock.timers.tick(60_001);
+    sweepBuckets();
+    assert.equal(_bucketCount(), 0, 'expired buckets are removed');
   });
 });

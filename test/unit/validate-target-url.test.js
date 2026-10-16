@@ -1,6 +1,7 @@
-import { describe, it } from 'node:test';
+import { describe, it, beforeEach, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateTargetUrl } from '../../lib/validate-target-url.js';
+import dns from 'node:dns/promises';
+import { validateTargetUrl, _clearDnsCache } from '../../lib/validate-target-url.js';
 
 describe('validateTargetUrl', () => {
   it('accepts a plain https URL', async () => {
@@ -55,5 +56,55 @@ describe('validateTargetUrl', () => {
 
   it('rejects hostnames that resolve to private addresses', async () => {
     await assert.rejects(() => validateTargetUrl('http://localhost/'), /Private or internal target addresses are not allowed/);
+  });
+});
+
+describe('validateTargetUrl DNS cache', () => {
+  beforeEach(() => _clearDnsCache());
+  afterEach(() => {
+    mock.restoreAll();
+    _clearDnsCache();
+  });
+
+  it('resolves a hostname once and reuses the result', async () => {
+    const lookup = mock.method(dns, 'lookup', async () => [{ address: '93.184.215.14', family: 4 }]);
+    await validateTargetUrl('https://cached.example/a');
+    await validateTargetUrl('https://cached.example/b');
+    assert.equal(lookup.mock.callCount(), 1);
+  });
+
+  it('shares one in-flight lookup between concurrent requests', async () => {
+    const lookup = mock.method(dns, 'lookup', async () => [{ address: '93.184.215.14', family: 4 }]);
+    await Promise.all([
+      validateTargetUrl('https://burst.example/1'),
+      validateTargetUrl('https://burst.example/2'),
+      validateTargetUrl('https://burst.example/3'),
+    ]);
+    assert.equal(lookup.mock.callCount(), 1);
+  });
+
+  it('caches private verdicts too', async () => {
+    const lookup = mock.method(dns, 'lookup', async () => [{ address: '10.0.0.5', family: 4 }]);
+    await assert.rejects(() => validateTargetUrl('https://internal.example/'), /Private or internal/);
+    await assert.rejects(() => validateTargetUrl('https://internal.example/'), /Private or internal/);
+    assert.equal(lookup.mock.callCount(), 1);
+  });
+
+  it('expires failed lookups quickly', async () => {
+    mock.timers.enable({ apis: ['Date'] });
+    const lookup = mock.method(dns, 'lookup', async () => { throw new Error('ENOTFOUND'); });
+    await assert.rejects(() => validateTargetUrl('https://flaky.example/'), /Could not resolve/);
+    await assert.rejects(() => validateTargetUrl('https://flaky.example/'), /Could not resolve/);
+    assert.equal(lookup.mock.callCount(), 1);
+
+    mock.timers.tick(6_000);
+    await assert.rejects(() => validateTargetUrl('https://flaky.example/'), /Could not resolve/);
+    assert.equal(lookup.mock.callCount(), 2);
+  });
+
+  it('does not cache literal IPs', async () => {
+    const lookup = mock.method(dns, 'lookup', async () => []);
+    await validateTargetUrl('https://93.184.215.14/');
+    assert.equal(lookup.mock.callCount(), 0);
   });
 });

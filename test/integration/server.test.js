@@ -124,4 +124,29 @@ describe('server integration', () => {
       .get('/https://example.com/not-found')
       .expect(404);
   });
+
+  it('proxies targets given as an encoded ?url= query parameter', async () => {
+    nock('https://example.com')
+      .get('/api/data')
+      .query({ q: '1', r: '2' })
+      .reply(200, { ok: true });
+
+    const target = encodeURIComponent('https://example.com/api/data?q=1&r=2');
+    const res = await request(app).get(`/?url=${target}`).expect(200);
+    assert.deepEqual(res.body, { ok: true });
+  });
+
+  it('proxies targets given as an unencoded ?url= query parameter', async () => {
+    nock('https://example.com')
+      .get('/api/data')
+      .query({ q: '1', r: '2' })
+      .reply(200, { ok: true });
+
+    const res = await request(app).get('/?url=https://example.com/api/data?q=1&r=2').expect(200);
+    assert.deepEqual(res.body, { ok: true });
+  });
+
+  it('applies SSRF checks to the ?url= form', async () => {
+    await request(app).get('/?url=http://127.0.0.1/').expect(400);
+  });
 });

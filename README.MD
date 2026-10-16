@@ -45,24 +45,32 @@ npm run lint          # run ESLint
 
 ## Usage
 
-Send your request to the CorsNova server, specifying the target URL as the path:
+Send your request to the CorsNova server, passing the target URL in the `url` query parameter:
 
 ```
-https://corsnova.vercel.app/<target_url>
+https://corsnova.vercel.app/?url=<target_url>
 ```
 
 Example:
 
 ```
-https://corsnova.vercel.app/https://example.com/api/data
+https://corsnova.vercel.app/?url=https://example.com/api/data
 ```
+
+In code, encode the target so its own query string is kept intact:
+
+```javascript
+fetch('https://corsnova.vercel.app/?url=' + encodeURIComponent('https://example.com/api/data?q=1'));
+```
+
+The path form (`https://corsnova.vercel.app/https://example.com`) still works on self-hosted and Docker deployments. On Vercel, avoid it in browsers: Vercel's edge collapses the `//` into `/` and answers with a `308` redirect that carries no CORS headers, so the browser blocks the request. Use `?url=`, or URL-encode the target (`/https%3A%2F%2Fexample.com`).
 
 ### Request Forwarding
 
 - All HTTP methods are supported.
 - Request headers prefixed with `x-` are forwarded without the prefix.
 - Cookies are forwarded.
-- Request body is forwarded as-is, supporting JSON, URL-encoded, and multipart forms (including files).
+- The request body is streamed to the target byte-for-byte, whatever its content type (JSON, URL-encoded, multipart with files, plain text, binary). The limit is 4 MB.
 - The default `User-Agent` is `CorsNova/1.0`. Send `x-user-agent` to override it.
 
 ### Response Forwarding
@@ -81,7 +89,7 @@ formData.append('key2', 'value2');
 // Append files if needed
 // formData.append('myFile', fileInputElement.files[0]);
 
-fetch('https://corsnova.vercel.app/https://www.example.com', {
+fetch('https://corsnova.vercel.app/?url=' + encodeURIComponent('https://www.example.com'), {
   method: 'POST',
   headers: {
     // Prefix custom headers with 'x-'
