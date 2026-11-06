@@ -125,6 +125,43 @@ The proxy will make a POST request to `https://www.example.com` with the `Author
 - Function execution time is capped by `maxDuration` in `vercel.json` (30 seconds by default).
 - Functions run in the regions configured in `vercel.json` (`fra1` and `iad1` by default).
 
+## Deployment on Supabase Edge Functions
+
+`supabase/functions/corsnova/` is the same proxy as a Supabase Edge Function. `handler.js` holds the logic using web-standard APIs only, so `npm test` covers it under Node (`test/supabase/`). `index.ts` wires in Deno's DNS resolver.
+
+```bash
+supabase functions deploy corsnova --no-verify-jwt --project-ref <project-ref>
+```
+
+`--no-verify-jwt` is required. Without it the gateway rejects every call that lacks a Supabase key. Usage is the same as on Vercel:
+
+```
+https://<project-ref>.supabase.co/functions/v1/corsnova?url=<encoded target>
+https://<project-ref>.supabase.co/functions/v1/corsnova/https://example.com
+```
+
+Differences from the Express version:
+
+- Redirects are followed by hand (up to 20), and every hop goes through the SSRF check. Cross-origin hops drop `Authorization` and `Cookie`.
+- No body size cap by default. Bodies up to 4 MB are buffered so 307/308 redirects can resend them. Larger bodies stream straight to the target, and a 307/308 after one is returned to the caller instead of being followed. Uploads of 150 MB went through in testing; the practical ceiling is how much you can upload within Supabase's 150 s limit.
+- The 145 s timeout (just under the Free plan's 150 s cutoff) covers the wait for response headers. The body then streams until Supabase's limit.
+- `Access-Control-Expose-Headers` lists the `Forward-*` names explicitly, because browsers treat `*` literally on credentialed requests.
+- Rate limiting is off by default. When enabled, it keys on `cf-connecting-ip`, which the Supabase gateway sets and clients cannot spoof. It is per worker instance, so it is a best-effort limit.
+
+Supabase platform limits:
+
+- Without a custom domain, a `GET` response with `Content-Type: text/html` is rewritten to `text/plain`. `fetch()` callers still get the same body, and `Forward-Content-Type` carries the real type.
+- Supabase appends `(variant; SupabaseEdgeRuntime/…; ref=<project-ref>)` to the outgoing `User-Agent`.
+- Ports 25 and 587 are blocked for outbound connections.
+
+Optional function secrets (`0` means off):
+
+| Secret | Default |
+|---|---|
+| `CORSNOVA_TIMEOUT_MS` | `145000` |
+| `CORSNOVA_RATE_LIMIT_PER_MINUTE` | `0` |
+| `CORSNOVA_MAX_BODY_BYTES` | `0` |
+
 ## Environment variables
 
 | Variable | Default | Description |
