@@ -124,6 +124,8 @@ npx wrangler login
 npx wrangler deploy
 ```
 
+Pushes to `main` deploy the Worker automatically through `.github/workflows/deploy.yml` once the `CLOUDFLARE_API_TOKEN` (with the "Edit Cloudflare Workers" permission) and `CLOUDFLARE_ACCOUNT_ID` repository secrets are set. Without them the job is skipped.
+
 The worker serves from the root of its domain:
 
 ```
