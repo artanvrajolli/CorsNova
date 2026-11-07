@@ -4,7 +4,7 @@
   <img src="images/request_flow.svg" alt="CorsNova request flow" height="600">
 </p>
 
-A lightweight CORS proxy server built with Express.js. It is designed to run as a Vercel serverless function and helps bypass CORS restrictions during development and testing.
+A lightweight CORS proxy server built with Express.js. It runs on Cloudflare Workers, can also be deployed to Vercel, Supabase or Docker, and helps bypass CORS restrictions during development and testing.
 
 ## Features
 
@@ -28,7 +28,7 @@ A lightweight CORS proxy server built with Express.js. It is designed to run as 
 ## Requirements
 
 - [Node.js](https://nodejs.org/) 22.x
-- A Vercel account (for deployment)
+- A Cloudflare account (or Vercel/Supabase) (for deployment)
 
 ## Installation
 
@@ -50,22 +50,22 @@ npm run lint          # run ESLint
 Send your request to the CorsNova server, passing the target URL in the `url` query parameter:
 
 ```
-https://corsnova.vercel.app/?url=<target_url>
+https://corsnova.artanvrajolli.workers.dev/?url=<target_url>
 ```
 
 Example:
 
 ```
-https://corsnova.vercel.app/?url=https://example.com/api/data
+https://corsnova.artanvrajolli.workers.dev/?url=https://example.com/api/data
 ```
 
 In code, encode the target so its own query string is kept intact:
 
 ```javascript
-fetch('https://corsnova.vercel.app/?url=' + encodeURIComponent('https://example.com/api/data?q=1'));
+fetch('https://corsnova.artanvrajolli.workers.dev/?url=' + encodeURIComponent('https://example.com/api/data?q=1'));
 ```
 
-The path form (`https://corsnova.vercel.app/https://example.com`) still works on self-hosted and Docker deployments. On Vercel, avoid it in browsers: Vercel's edge collapses the `//` into `/` and answers with a `308` redirect that carries no CORS headers, so the browser blocks the request. Use `?url=`, or URL-encode the target (`/https%3A%2F%2Fexample.com`).
+The path form (`https://corsnova.artanvrajolli.workers.dev/https://example.com`) works on Cloudflare Workers, self-hosted and Docker deployments. On Vercel you must use `?url=`: Vercel's edge collapses the `//` into `/` and answers with a `308` redirect that carries no CORS headers, so the browser blocks the request.
 
 ### Request Forwarding
 
@@ -91,7 +91,7 @@ formData.append('key2', 'value2');
 // Append files if needed
 // formData.append('myFile', fileInputElement.files[0]);
 
-fetch('https://corsnova.vercel.app/?url=' + encodeURIComponent('https://www.example.com'), {
+fetch('https://corsnova.artanvrajolli.workers.dev/?url=' + encodeURIComponent('https://www.example.com'), {
   method: 'POST',
   headers: {
     // Prefix custom headers with 'x-'
@@ -113,6 +113,35 @@ fetch('https://corsnova.vercel.app/?url=' + encodeURIComponent('https://www.exam
 ```
 
 The proxy will make a POST request to `https://www.example.com` with the `Authorization: Bearer YOUR_TOKEN_HERE` header and the provided form data.
+
+## Deployment on Cloudflare Workers
+
+`cloudflare/worker.js` runs the same handler as the Supabase function (`supabase/functions/corsnova/handler.js`) on Cloudflare Workers. Tests are in `test/cloudflare/`.
+
+```bash
+cd cloudflare
+npx wrangler login
+npx wrangler deploy
+```
+
+The worker serves from the root of its domain:
+
+```
+https://corsnova.<your-subdomain>.workers.dev/?url=<encoded target>
+https://corsnova.<your-subdomain>.workers.dev/https://example.com
+```
+
+Workers have no DNS API, so the SSRF check resolves each target host over DNS-over-HTTPS (`https://cloudflare-dns.com/dns-query`, A and AAAA records) and blocks private addresses before any upstream request is made.
+
+Optional settings go in the `[vars]` block of `cloudflare/wrangler.toml` (commented out by default; `0` means off):
+
+| Variable | Default |
+|---|---|
+| `CORSNOVA_TIMEOUT_MS` | `145000` |
+| `CORSNOVA_RATE_LIMIT_PER_MINUTE` | `0` |
+| `CORSNOVA_MAX_BODY_BYTES` | `0` |
+
+The Workers Free plan allows 10 ms of CPU time per request. Time spent waiting on the network does not count, so plain proxying usually fits, but a request that goes over fails with error 1102 (Worker exceeded resource limits).
 
 ## Deployment on Vercel
 
@@ -181,35 +210,6 @@ Optional function secrets (`0` means off):
 | `CORSNOVA_TIMEOUT_MS` | `145000` |
 | `CORSNOVA_RATE_LIMIT_PER_MINUTE` | `0` |
 | `CORSNOVA_MAX_BODY_BYTES` | `0` |
-
-## Deployment on Cloudflare Workers
-
-`cloudflare/worker.js` runs the same handler as the Supabase function (`supabase/functions/corsnova/handler.js`) on Cloudflare Workers. Tests are in `test/cloudflare/`.
-
-```bash
-cd cloudflare
-npx wrangler login
-npx wrangler deploy
-```
-
-The worker serves from the root of its domain:
-
-```
-https://corsnova.<your-subdomain>.workers.dev/?url=<encoded target>
-https://corsnova.<your-subdomain>.workers.dev/https://example.com
-```
-
-Workers have no DNS API, so the SSRF check resolves each target host over DNS-over-HTTPS (`https://cloudflare-dns.com/dns-query`, A and AAAA records) and blocks private addresses before any upstream request is made.
-
-Optional settings go in the `[vars]` block of `cloudflare/wrangler.toml` (commented out by default; `0` means off):
-
-| Variable | Default |
-|---|---|
-| `CORSNOVA_TIMEOUT_MS` | `145000` |
-| `CORSNOVA_RATE_LIMIT_PER_MINUTE` | `0` |
-| `CORSNOVA_MAX_BODY_BYTES` | `0` |
-
-The Workers Free plan allows 10 ms of CPU time per request. Time spent waiting on the network does not count, so plain proxying usually fits, but a request that goes over fails with error 1102 (Worker exceeded resource limits).
 
 ## Environment variables
 
