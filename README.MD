@@ -4,7 +4,7 @@
   <img src="images/request_flow.svg" alt="CorsNova request flow" height="600">
 </p>
 
-A lightweight CORS proxy server built with Express.js. It is designed to run as a Vercel serverless function and helps bypass CORS restrictions during development and testing.
+A lightweight CORS proxy server built with Express.js. It runs on Cloudflare Workers, can also be deployed to Vercel, Supabase or Docker, and helps bypass CORS restrictions during development and testing.
 
 ## Features
 
@@ -21,12 +21,14 @@ A lightweight CORS proxy server built with Express.js. It is designed to run as 
   - Forwards all response headers from the target server to the client, prefixed with `Forward-` (e.g., `Content-Type` becomes `Forward-Content-Type`).
   - The upstream `Content-Type` is also set on the response so browsers and HTTP clients can parse the body automatically.
 - **Streaming**: Streams responses from the target server back to the client.
+- **CDN caching**: Anonymous `GET`/`HEAD` responses are cached on Vercel's CDN for up to 10 minutes, so repeat requests do not invoke the function. See [CDN caching](#cdn-caching).
+- **Response size cap**: Responses over 4 MB are refused (configurable with `MAX_RESPONSE_BYTES`).
 - **Safe CORS**: Reflects the request `Origin` and sets `Access-Control-Allow-Credentials: true` only when an origin is provided; otherwise it returns `Access-Control-Allow-Origin: *`.
 
 ## Requirements
 
 - [Node.js](https://nodejs.org/) 22.x
-- A Vercel account (for deployment)
+- A Cloudflare account (or Vercel/Supabase) (for deployment)
 
 ## Installation
 
@@ -48,22 +50,22 @@ npm run lint          # run ESLint
 Send your request to the CorsNova server, passing the target URL in the `url` query parameter:
 
 ```
-https://corsnova.vercel.app/?url=<target_url>
+https://corsnova.artanvrajolli.workers.dev/?url=<target_url>
 ```
 
 Example:
 
 ```
-https://corsnova.vercel.app/?url=https://example.com/api/data
+https://corsnova.artanvrajolli.workers.dev/?url=https://example.com/api/data
 ```
 
 In code, encode the target so its own query string is kept intact:
 
 ```javascript
-fetch('https://corsnova.vercel.app/?url=' + encodeURIComponent('https://example.com/api/data?q=1'));
+fetch('https://corsnova.artanvrajolli.workers.dev/?url=' + encodeURIComponent('https://example.com/api/data?q=1'));
 ```
 
-The path form (`https://corsnova.vercel.app/https://example.com`) still works on self-hosted and Docker deployments. On Vercel, avoid it in browsers: Vercel's edge collapses the `//` into `/` and answers with a `308` redirect that carries no CORS headers, so the browser blocks the request. Use `?url=`, or URL-encode the target (`/https%3A%2F%2Fexample.com`).
+The path form (`https://corsnova.artanvrajolli.workers.dev/https://example.com`) works on Cloudflare Workers, self-hosted and Docker deployments. On Vercel you must use `?url=`: Vercel's edge collapses the `//` into `/` and answers with a `308` redirect that carries no CORS headers, so the browser blocks the request.
 
 ### Request Forwarding
 
@@ -89,7 +91,7 @@ formData.append('key2', 'value2');
 // Append files if needed
 // formData.append('myFile', fileInputElement.files[0]);
 
-fetch('https://corsnova.vercel.app/?url=' + encodeURIComponent('https://www.example.com'), {
+fetch('https://corsnova.artanvrajolli.workers.dev/?url=' + encodeURIComponent('https://www.example.com'), {
   method: 'POST',
   headers: {
     // Prefix custom headers with 'x-'
@@ -112,6 +114,35 @@ fetch('https://corsnova.vercel.app/?url=' + encodeURIComponent('https://www.exam
 
 The proxy will make a POST request to `https://www.example.com` with the `Authorization: Bearer YOUR_TOKEN_HERE` header and the provided form data.
 
+## Deployment on Cloudflare Workers
+
+`cloudflare/worker.js` runs the same handler as the Supabase function (`supabase/functions/corsnova/handler.js`) on Cloudflare Workers. Tests are in `test/cloudflare/`.
+
+```bash
+cd cloudflare
+npx wrangler login
+npx wrangler deploy
+```
+
+The worker serves from the root of its domain:
+
+```
+https://corsnova.<your-subdomain>.workers.dev/?url=<encoded target>
+https://corsnova.<your-subdomain>.workers.dev/https://example.com
+```
+
+Workers have no DNS API, so the SSRF check resolves each target host over DNS-over-HTTPS (`https://cloudflare-dns.com/dns-query`, A and AAAA records) and blocks private addresses before any upstream request is made.
+
+Optional settings go in the `[vars]` block of `cloudflare/wrangler.toml` (commented out by default; `0` means off):
+
+| Variable | Default |
+|---|---|
+| `CORSNOVA_TIMEOUT_MS` | `145000` |
+| `CORSNOVA_RATE_LIMIT_PER_MINUTE` | `0` |
+| `CORSNOVA_MAX_BODY_BYTES` | `0` |
+
+The Workers Free plan allows 10 ms of CPU time per request. Time spent waiting on the network does not count, so plain proxying usually fits, but a request that goes over fails with error 1102 (Worker exceeded resource limits).
+
 ## Deployment on Vercel
 
 1. Push the repository to GitHub.
@@ -124,6 +155,24 @@ The proxy will make a POST request to `https://www.example.com` with the `Author
 - Request/response body size is capped by Vercel (4.5 MB on Hobby by default). The application enforces a 4 MB body limit to match.
 - Function execution time is capped by `maxDuration` in `vercel.json` (30 seconds by default).
 - Functions run in the regions configured in `vercel.json` (`fra1` and `iad1` by default).
+- Every byte a function returns counts as Fast Origin Transfer (function → CDN), and the Hobby plan allows 10 GB. Once that is used up, Vercel pauses the team's deployments. Two settings keep that number down:
+  - `MAX_RESPONSE_BYTES` (default 4 MB) caps the size of a proxied response. When the upstream declares a larger `Content-Length`, the proxy cancels the upstream body and answers `502` with a JSON error. A body without `Content-Length` is streamed and cut off once it crosses the cap, so the client sees an incomplete response. `HEAD` requests are not capped. Set `0` to turn the cap off.
+  - `CACHE_TTL_SECONDS` (default 600) lets Vercel's CDN serve repeat requests. A CDN hit does not invoke the function and adds no Fast Origin Transfer. Set `0` to turn caching off.
+
+## CDN caching
+
+The proxy sets `Vercel-CDN-Cache-Control: max-age=<ttl>` on a response only when all of these hold:
+
+- The request is `GET` or `HEAD`.
+- The request has no `Cookie`, `Authorization` or `Range` header, and no `x-` header apart from platform headers (`x-vercel-*`, `x-forwarded-*`, `x-real-ip`, `x-invocation-id`, `x-matched-path`).
+- The upstream status is `200`, `404` or `410`.
+- The upstream response has no `Set-Cookie`, no `Vary: *`, and no `no-store`, `no-cache` or `private` in `Cache-Control`.
+
+The TTL is the upstream `s-maxage` (or `max-age` if there is no `s-maxage`), capped at `CACHE_TTL_SECONDS`. Without either directive it is `CACHE_TTL_SECONDS`. An upstream `max-age=0` means no caching.
+
+`Vercel-CDN-Cache-Control` is read only by Vercel's CDN, so browsers and other caches in between are not affected. Cached responses also carry `Vary: Origin, X-Authorization, X-Api-Key, X-Cookie, X-User-Agent`, so each origin gets its own reflected `Access-Control-Allow-Origin`, and requests with different values in those headers never share an entry.
+
+The cache key does not include other custom `x-` headers or `Cookie`. A request that sends one of those is never stored, but it can still be answered with a copy cached by an anonymous request for the same URL. If that matters for a target, add a cache-buster to the target URL (for example `&_=<timestamp>`) or set `CACHE_TTL_SECONDS=0`.
 
 ## Deployment on Supabase Edge Functions
 
@@ -170,6 +219,8 @@ Optional function secrets (`0` means off):
 | `REQUEST_TIMEOUT_MS` | `25000` | Upstream request timeout in milliseconds. |
 | `DEFAULT_USER_AGENT` | `CorsNova/1.0 (...)` | Default `User-Agent` sent to upstream targets. |
 | `RATE_LIMIT_PER_MINUTE` | `100` | Maximum requests per IP per minute. |
+| `MAX_RESPONSE_BYTES` | `4194304` (4 MB) | Largest upstream response the proxy returns. `0`, negative or invalid turns the cap off. |
+| `CACHE_TTL_SECONDS` | `600` | Longest time Vercel's CDN may cache a response. `0` or invalid turns caching off. |
 | `VERCEL` | — | Set automatically by Vercel. Prevents `app.listen()` when present. |
 
 ## Security notes

@@ -8,6 +8,8 @@ import { prefixResponseHeaders } from './lib/prefix-response-headers.js';
 import { rateLimit } from './lib/rate-limit.js';
 import { logRequest } from './lib/log.js';
 import { extractTarget } from './lib/extract-target.js';
+import { getMaxResponseBytes, exceedsDeclaredLength, limitBytes, responseTooLargeError } from './lib/response-limit.js';
+import { isRequestCacheable, cacheTtlFor, getCacheTtlSeconds, CACHE_VARY } from './lib/cache-policy.js';
 
 const app = express();
 const port = process.env.PORT || 3030;
@@ -115,6 +117,15 @@ app.use(async (req, res) => {
       redirect: 'follow',
     });
 
+    // Refuse responses that declare a size over the cap before sending any
+    // headers, so the client gets a clean 502 instead of a cut stream.
+    const maxResponseBytes = getMaxResponseBytes();
+    if (req.method !== 'HEAD' && exceedsDeclaredLength(response.headers, maxResponseBytes)) {
+      await response.body?.cancel().catch(() => {});
+      const { message } = responseTooLargeError(maxResponseBytes);
+      return res.status(502).json({ status: 'error', message, requestId });
+    }
+
     res.set(prefixResponseHeaders(response.headers));
     const upstreamContentType = response.headers.get('content-type');
     if (upstreamContentType) {
@@ -123,11 +134,24 @@ app.use(async (req, res) => {
     res.set('Forward-Request-Id', requestId);
     res.status(response.status);
 
+    // Let Vercel's CDN serve repeat anonymous requests without invoking us.
+    if (isRequestCacheable(req)) {
+      const ttl = cacheTtlFor(response, getCacheTtlSeconds());
+      if (ttl > 0) {
+        res.set('Vercel-CDN-Cache-Control', `max-age=${ttl}`);
+        res.set('Vary', CACHE_VARY);
+      }
+    }
+
     if (req.method === 'HEAD' || !response.body) {
       return res.end();
     }
 
-    await pipeline(Readable.fromWeb(response.body), res);
+    if (maxResponseBytes > 0) {
+      await pipeline(Readable.fromWeb(response.body), limitBytes(maxResponseBytes), res);
+    } else {
+      await pipeline(Readable.fromWeb(response.body), res);
+    }
   } catch (err) {
     // The client disconnected; there is nobody left to answer.
     if (clientAbort.signal.aborted) {
@@ -135,6 +159,13 @@ app.use(async (req, res) => {
     }
     if (isBodyTooLarge(err) && !res.headersSent) {
       return sendBodyTooLarge(req, res, err);
+    }
+    // A chunked body crossed the cap after headers went out, so cut the
+    // stream; the client sees an incomplete response.
+    if (err.code === 'RESPONSE_TOO_LARGE') {
+      console.warn(JSON.stringify({ requestId, warning: err.message, target: targetUrl?.hostname }));
+      res.destroy(err);
+      return;
     }
     console.error(JSON.stringify({ requestId, error: err.message, stack: err.stack }));
     // Headers are already on the wire, so the only option is to cut the stream.
