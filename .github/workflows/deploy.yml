@@ -108,7 +108,7 @@ jobs:
         run: |
           set -o pipefail
           vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN" 2>&1 | tee "$RUNNER_TEMP/vercel.log" || {
-            grep -i -A4 'error' "$RUNNER_TEMP/vercel.log" | grep -v '^\s*$' | head -10 | sed 's/^/::error::/'
+            grep -i -E -A4 'error|✗|blocked' "$RUNNER_TEMP/vercel.log" | grep -v '^\s*$' | head -10 | sed 's/^/::error::/'
             exit 1
           }
 
