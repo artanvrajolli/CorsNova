@@ -1,0 +1,9 @@
+name = "corsnova"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+# Optional settings. Uncomment to override the defaults.
+# [vars]
+# CORSNOVA_TIMEOUT_MS = "145000"          # wait for upstream response headers
+# CORSNOVA_RATE_LIMIT_PER_MINUTE = "0"    # per client IP, per isolate; 0 = off
+# CORSNOVA_MAX_BODY_BYTES = "0"           # request body cap; 0 = off
